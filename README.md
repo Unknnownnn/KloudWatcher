@@ -99,20 +99,7 @@ The application is structured as follows:
 - `/backend` - Python FastAPI server
 - `/public` - Static assets
 - `/styles` - Global styles and Tailwind configuration
-
-## API Endpoints
-
-- `GET /api/map` - Get the disaster map visualization
-- `POST /api/disasters/{disaster_id}/respond` - Submit a disaster response
-- `GET /api/disasters/{disaster_id}/resources` - Get resources for a specific disaster
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+  
 
 ## License
 
