@@ -20,12 +20,14 @@ export function formatNumber(num: number): string {
 export const disasterTypes = [
   { value: "flood", label: "Flood" },
   { value: "earthquake", label: "Earthquake" },
-  { value: "cyclone", label: "Cyclone" },
-  { value: "landslide", label: "Landslide" },
+  { value: "hurricane", label: "Hurricane" },
+  { value: "wildfire", label: "Wildfire" },
   { value: "tsunami", label: "Tsunami" },
   { value: "drought", label: "Drought" },
-  { value: "wildfire", label: "Wildfire" },
-  { value: "other", label: "Other" },
+  { value: "landslide", label: "Landslide" },
+  { value: "tornado", label: "Tornado" },
+  { value: "volcanic_eruption", label: "Volcanic Eruption" },
+  { value: "extreme_weather", label: "Extreme Weather" }
 ]
 
 export const severityLevels = [

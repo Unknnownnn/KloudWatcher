@@ -1,4 +1,4 @@
-// File: C:\Users\Aakansh\Documents\Cloud Computing\kloudwatcher2\app\(dashboard)\dashboard\page.tsx
+// File: C:\Users\Aakansh\Documents\Git\KloudWatcher\app\(dashboard)\dashboard\page.tsx
 import * as entry from '../../../../../app/(dashboard)/dashboard/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

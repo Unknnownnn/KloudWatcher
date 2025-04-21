@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background Circle -->
+    <circle cx="100" cy="100" r="90" fill="#f0f9ff"/>
+    
+    <!-- Main Cloud - Simplified outline style -->
+    <path d="M 60 105
+             C 60 105, 50 105, 50 95
+             C 50 85, 60 85, 70 85
+             C 70 75, 80 65, 100 65
+             C 120 65, 130 75, 130 85
+             C 140 85, 150 85, 150 95
+             C 150 105, 140 105, 140 105
+             Z"
+          fill="none"
+          stroke="#3b82f6"
+          stroke-width="4"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+    
+    <!-- Radar Circle -->
+    <circle cx="100" cy="95" r="45" 
+            fill="none" 
+            stroke="#3b82f6" 
+            stroke-width="2"
+            stroke-dasharray="4,4">
+        <animate attributeName="opacity"
+                 values="0.2;1;0.2"
+                 dur="3s"
+                 repeatCount="indefinite"/>
+    </circle>
+    
+    <!-- GPS Symbol -->
+    <g transform="translate(100,95)">
+        <!-- Outer Circle -->
+        <circle cx="0" cy="0" r="15"
+                fill="none"
+                stroke="#3b82f6"
+                stroke-width="3"/>
+        
+        <!-- Crosshair -->
+        <line x1="-15" y1="0" x2="15" y2="0"
+              stroke="#3b82f6"
+              stroke-width="3"/>
+        <line x1="0" y1="-15" x2="0" y2="15"
+              stroke="#3b82f6"
+              stroke-width="3"/>
+        
+        <!-- Center Point -->
+        <circle cx="0" cy="0" r="3"
+                fill="#3b82f6"/>
+    </g>
+    
+    <!-- Text -->
+    <text x="100" y="165" 
+          font-family="Arial, sans-serif" 
+          font-weight="bold"
+          font-size="18"
+          text-anchor="middle"
+          fill="#1e40af">KloudWatcher</text>
+</svg> 

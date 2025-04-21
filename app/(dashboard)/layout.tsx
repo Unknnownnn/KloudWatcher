@@ -1,4 +1,5 @@
 import type React from "react"
+import 'leaflet/dist/leaflet.css'
 
 export default function DashboardLayout({
   children,

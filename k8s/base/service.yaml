@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kloudwatcher-frontend
+  namespace: kloudwatcher
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+  selector:
+    app: kloudwatcher
+    tier: frontend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kloudwatcher-prediction-service
+  namespace: kloudwatcher
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+  selector:
+    app: kloudwatcher
+    tier: prediction 

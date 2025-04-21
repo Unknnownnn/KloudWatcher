@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -10,41 +9,154 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { disasterTypes } from "@/lib/utils"
 import { Brain, CloudLightning } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { supabase } from "@/lib/supabase"
+import type { Prediction } from "@/lib/supabase"
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
 export default function AIPredictionsPage() {
   const [isLoading, setIsLoading] = useState(false)
-  const [prediction, setPrediction] = useState<any>(null)
+  const [prediction, setPrediction] = useState<Prediction | null>(null)
+  const [selectedType, setSelectedType] = useState<string>("")
   const { toast } = useToast()
+
+  // Verify Supabase connection on component mount
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('predictions')
+          .select('*')
+          .limit(1)
+        
+        if (error) {
+          console.error('Supabase connection error:', error)
+          toast({
+            title: "Connection Error",
+            description: "Failed to connect to the database. Please check your configuration.",
+            variant: "destructive",
+          })
+        } else {
+          console.log('Supabase connected successfully:', data)
+        }
+      } catch (error) {
+        console.error('Failed to check Supabase connection:', error)
+      }
+    }
+
+    checkConnection()
+  }, [toast])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setIsLoading(true)
-    
-    // Simulate API call
-    setTimeout(() => {
-      const mockPrediction = {
-        disasterType: "flood",
-        location: "Kerala, India",
-        prediction: "Based on the current data, the flood in Kerala, India is predicted to affect approximately 15,000-20,000 people in the next 24-48 hours. The most vulnerable areas include low-lying regions near water bodies and densely populated urban centers. Immediate evacuation is recommended for residents in these areas. Emergency services should prepare for potential infrastructure damage, including power outages and road blockages. Relief centers should be established with capacity for at least 10,000 people.",
-        timestamp: new Date().toISOString(),
-        affectedAreas: ["Urban centers", "Low-lying regions", "Coastal areas"],
-        estimatedPeopleAtRisk: 18500,
-        recommendedActions: [
-          "Evacuate vulnerable areas",
-          "Establish relief centers",
-          "Deploy emergency response teams",
-          "Prepare medical facilities",
-          "Secure critical infrastructure"
-        ]
-      }
-      
-      setPrediction(mockPrediction)
-      setIsLoading(false)
+    if (!selectedType) {
       toast({
-        title: "Prediction Generated",
-        description: "AI has successfully generated a disaster impact prediction.",
+        title: "Error",
+        description: "Please select a disaster type",
+        variant: "destructive",
       })
-    }, 2000)
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      console.log('Submitting prediction request for type:', selectedType)
+
+      // Create initial prediction
+      const initialPrediction = {
+        disaster_type: selectedType,
+        status: 'pending',
+        location: 'Processing...',
+        prediction: 'Analyzing data...',
+        affected_areas: [],
+        estimated_people_at_risk: 0,
+        recommended_actions: [],
+        confidence_score: 0,
+        data_sources: []
+      }
+
+      // Insert a new prediction request
+      const { data, error } = await supabase
+        .from('predictions')
+        .insert(initialPrediction)
+        .select()
+        .single()
+
+      console.log('Supabase insert response:', { data, error })
+
+      if (error) {
+        console.error('Supabase insert error:', error)
+        throw error
+      }
+
+      // Set initial prediction state
+      setPrediction(data as Prediction)
+
+      // Subscribe to real-time updates for this prediction
+      const predictionSubscription = supabase
+        .channel('prediction-update')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'predictions',
+            filter: `id=eq.${data.id}`
+          },
+          (payload: RealtimePostgresChangesPayload<Prediction>) => {
+            console.log('Received real-time update:', payload)
+            if (payload.new && payload.new.status === 'completed') {
+              setPrediction(payload.new as Prediction)
+              toast({
+                title: "Prediction Generated",
+                description: "AI has successfully generated a disaster impact prediction.",
+              })
+            }
+          }
+        )
+        .subscribe()
+
+      console.log('Subscribed to real-time updates')
+
+      // Simulate prediction completion (remove this in production)
+      setTimeout(async () => {
+        const mockUpdate = {
+          ...initialPrediction,
+          id: data.id,
+          status: 'completed',
+          location: "Kerala, India",
+          prediction: "Based on current data, expecting severe flooding in coastal regions...",
+          affected_areas: ["Coastal Areas", "Low-lying Regions"],
+          estimated_people_at_risk: 15000,
+          recommended_actions: ["Evacuate coastal areas", "Prepare emergency shelters"],
+          confidence_score: 85,
+          data_sources: ["Weather Data", "Historical Records"]
+        }
+
+        const { error: updateError } = await supabase
+          .from('predictions')
+          .update(mockUpdate)
+          .eq('id', data.id)
+
+        if (updateError) {
+          console.error('Error updating prediction:', updateError)
+        }
+      }, 3000)
+
+      // Cleanup subscription
+      return () => {
+        console.log('Cleaning up subscription')
+        predictionSubscription.unsubscribe()
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      toast({
+        title: "Error",
+        description: "Failed to generate prediction. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -85,12 +197,77 @@ export default function AIPredictionsPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="disasterType">Disaster Type</Label>
-                  <Select>
+                  <Select value={selectedType} onValueChange={setSelectedType}>
                     <SelectTrigger id="disasterType">
                       <SelectValue placeholder="Select disaster type" />
                     </SelectTrigger>
                     <SelectContent>
                       {disasterTypes.map((type) => (
                         <SelectItem key={type.value} value={type.value}>
-                          {type\
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Generating..." : "Generate Prediction"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+          
+          {prediction && (
+            <Card className="col-span-1 md:col-span-2">
+              <CardHeader>
+                <CardTitle>Prediction Results</CardTitle>
+                <CardDescription>
+                  AI-generated disaster impact prediction and recommendations
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h3 className="font-semibold">Location</h3>
+                  <p>{prediction.location}</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold">Prediction</h3>
+                  <p>{prediction.prediction}</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold">Affected Areas</h3>
+                  <ul className="list-inside list-disc">
+                    {prediction.affected_areas.map((area: string) => (
+                      <li key={area}>{area}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="font-semibold">Recommended Actions</h3>
+                  <ul className="list-inside list-disc">
+                    {prediction.recommended_actions.map((action: string) => (
+                      <li key={action}>{action}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="font-semibold">Confidence Score</h3>
+                  <p>{prediction.confidence_score}%</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold">Data Sources</h3>
+                  <ul className="list-inside list-disc">
+                    {prediction.data_sources.map((source: string) => (
+                      <li key={source}>{source}</li>
+                    ))}
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </main>
+    </div>
+  )
+}
 
