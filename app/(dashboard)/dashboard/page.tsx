@@ -370,16 +370,88 @@ export default function DashboardPage() {
                         <div className="flex-1 space-y-1">
                           <p className="text-sm font-medium">{team.name}</p>
                           <div className="flex items-center text-xs text-muted-foreground">
-                            <Badge variant="outline" className={team.status === "Active" ? "bg-green-100" : ""}>
+                            <Badge variant="outline" className={team.status === "Active" ? "bg-blue-700 text-white hover:bg-blue-800" : "bg-blue-600 text-white hover:bg-blue-700"}>
                               {team.status}
                             </Badge>
                             <span className="ml-2">{team.members} members</span>
                             <span className="ml-2">Location: {team.location}</span>
                           </div>
                         </div>
-                        <Button size="sm" variant="outline">
-                          View
-                        </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button size="sm" variant="outline">
+                              View
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>{team.name}</DialogTitle>
+                              <DialogDescription>
+                                Team details and current deployment status
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <h3 className="text-sm font-medium">Status</h3>
+                                  <p className="text-sm text-muted-foreground">{team.status}</p>
+                                </div>
+                                <div>
+                                  <h3 className="text-sm font-medium">Location</h3>
+                                  <p className="text-sm text-muted-foreground">{team.location}</p>
+                                </div>
+                                <div>
+                                  <h3 className="text-sm font-medium">Team Size</h3>
+                                  <p className="text-sm text-muted-foreground">{team.members} members</p>
+                                </div>
+                                <div>
+                                  <h3 className="text-sm font-medium">Specialization</h3>
+                                  <p className="text-sm text-muted-foreground">
+                                    {team.name.includes("Medical") 
+                                      ? "Medical Response" 
+                                      : team.name.includes("Rescue") 
+                                        ? "Search & Rescue" 
+                                        : team.name.includes("Logistics") 
+                                          ? "Resource Management"
+                                          : "General Response"}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              <div className="border-t pt-4">
+                                <h3 className="mb-2 text-sm font-medium">Team Members</h3>
+                                <div className="rounded-md border">
+                                  {[...Array(3)].map((_, i) => (
+                                    <div key={i} className="flex items-center justify-between border-b p-2 last:border-0">
+                                      <div className="flex items-center gap-2">
+                                        <div className="h-6 w-6 rounded-full bg-primary/10"></div>
+                                        <span className="text-sm">
+                                          {["Team Leader", "Field Specialist", "Support Personnel"][i]}
+                                        </span>
+                                      </div>
+                                      <Badge variant="outline" className="bg-blue-100">
+                                        {i === 0 ? "Leader" : i === 1 ? "Specialist" : "Support"}
+                                      </Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              
+                              <div className="rounded-md border bg-muted/50 p-3">
+                                <h3 className="mb-2 text-sm font-medium">Current Assignment</h3>
+                                <p className="text-sm text-muted-foreground">
+                                  {team.status === "Active" 
+                                    ? `Responding to disaster situation in ${team.location}`
+                                    : "On standby, ready for deployment"}
+                                </p>
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button type="button" variant="outline">Contact Team</Button>
+                              <Button type="button">View Full Details</Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     ))}
                   </div>
