@@ -1,73 +1,136 @@
-import { AlertCircle, MessageSquare, Package, Users } from "lucide-react"
+"use client"
+
+import { useState, useEffect, useCallback } from "react"
+import { formatDistanceToNow } from "date-fns"
+import { createClient } from '@supabase/supabase-js'
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+interface ActivityItem {
+  id: string
+  name: string
+  disaster_type: string
+  created_at: string
+  status: string
+  priority: string
+}
 
 export default function RecentActivity() {
-  const activities = [
-    {
-      id: 1,
-      type: "resource",
-      message: "200 food packages deployed to Kerala Floods",
-      timestamp: new Date("2023-07-15T10:30:00"),
-      icon: Package,
-    },
-    {
-      id: 2,
-      type: "team",
-      message: "Rescue team Alpha deployed to Uttarakhand",
-      timestamp: new Date("2023-07-15T09:45:00"),
-      icon: Users,
-    },
-    {
-      id: 3,
-      type: "alert",
-      message: "Cyclone Amphan intensity increased to Category 4",
-      timestamp: new Date("2023-07-15T08:20:00"),
-      icon: AlertCircle,
-    },
-    {
-      id: 4,
-      type: "communication",
-      message: "Emergency broadcast sent to West Bengal residents",
-      timestamp: new Date("2023-07-15T07:15:00"),
-      icon: MessageSquare,
-    },
-    {
-      id: 5,
-      type: "resource",
-      message: "Medical supplies (150 units) sent to Kerala",
-      timestamp: new Date("2023-07-15T06:30:00"),
-      icon: Package,
-    },
-  ]
+  const [activities, setActivities] = useState<ActivityItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const getIconColor = (type: string) => {
-    switch (type) {
-      case "resource":
-        return "text-blue-500"
-      case "team":
-        return "text-green-500"
-      case "alert":
-        return "text-red-500"
-      case "communication":
-        return "text-purple-500"
+  const fetchRecentActivity = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      
+      const { data, error } = await supabase
+        .from('predictions')
+        .select('id, name, disaster_type, created_at, status, priority')
+        .order('created_at', { ascending: false })
+        .limit(5)
+      
+      if (error) {
+        console.error('Error fetching recent activity:', error)
+        return
+      }
+      
+      setActivities(data || [])
+    } catch (err) {
+      console.error('Error fetching recent activity:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchRecentActivity()
+    
+    // Set up real-time subscription for updates
+    const subscription = supabase
+      .channel('activity-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'predictions' },
+        () => {
+          fetchRecentActivity()
+        }
+      )
+      .subscribe()
+      
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [fetchRecentActivity])
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "✅"
+      case "active":
+        return "🔴"
+      case "responding":
+        return "🚨"
+      case "pending":
+        return "⏳"
       default:
-        return "text-gray-500"
+        return "📋"
     }
   }
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  const getPriorityIndicator = (priority: string) => {
+    switch (priority) {
+      case "high":
+        return "bg-red-500"
+      case "medium":
+        return "bg-orange-500"
+      case "low":
+        return "bg-yellow-500"
+      default:
+        return "bg-gray-500"
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-full py-4">
+        <div className="text-center">
+          <div className="mb-2 h-6 w-6 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
+          <div className="text-xs text-muted-foreground">Loading activity...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (activities.length === 0) {
+    return (
+      <div className="flex justify-center items-center h-full py-8">
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">No recent activity</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-4">
       {activities.map((activity) => (
-        <div key={activity.id} className="flex items-start gap-3 border-b pb-3 last:border-0">
-          <div className={`mt-0.5 rounded-full p-1.5 ${getIconColor(activity.type)} bg-opacity-10`}>
-            <activity.icon className={`h-4 w-4 ${getIconColor(activity.type)}`} />
+        <div key={activity.id} className="flex items-start gap-3 pb-3 last:pb-0">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
+            <span role="img" aria-label={activity.status}>
+              {getStatusIcon(activity.status)}
+            </span>
           </div>
-          <div className="flex-1 space-y-1">
-            <p className="text-sm">{activity.message}</p>
-            <p className="text-xs text-muted-foreground">{formatTime(activity.timestamp)}</p>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium">{activity.name}</p>
+              <div className={`h-2 w-2 rounded-full ${getPriorityIndicator(activity.priority)}`}></div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {activity.disaster_type.charAt(0).toUpperCase() + activity.disaster_type.slice(1)} disaster - {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+            </p>
           </div>
         </div>
       ))}

@@ -16,7 +16,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Checkbox } from "@/components/ui/checkbox"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   AlertCircle,
   BarChart3,
@@ -26,6 +33,7 @@ import {
   FileText,
   HelpCircle,
   Home,
+  LogOut,
   MapPin,
   MessageSquare,
   Package,
@@ -39,16 +47,28 @@ import DisasterList from "@/components/disaster-list"
 import ResourceAllocation from "@/components/resource-allocation"
 import RecentActivity from "@/components/recent-activity"
 import DisasterStats from "@/components/disaster-stats"
+import DashboardSummary from "@/components/dashboard-summary"
 import { toast } from "sonner"
 import Link from "next/link"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
+import { createClient } from '@supabase/supabase-js'
+import { useRouter } from 'next/navigation'
+import DisasterManagement from "@/components/disaster-management"
+import ResourceManagement from "@/components/resource-management"
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("overview")
   const [selectedResources, setSelectedResources] = useState<{ [key: string]: string[] }>({})
   const [isResponding, setIsResponding] = useState(false)
   const [responseStatus, setResponseStatus] = useState<{ [key: string]: 'pending' | 'success' | 'error' | null }>({})
+  const router = useRouter()
 
   // Mock data for teams
   const teams = [
@@ -113,6 +133,18 @@ export default function DashboardPage() {
     }
   }
 
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      toast.success('Signed out successfully')
+      router.push('/login')
+    } catch (error) {
+      console.error('Error signing out:', error)
+      toast.error('Failed to sign out')
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b bg-background">
@@ -139,16 +171,31 @@ export default function DashboardPage() {
               <Settings className="h-5 w-5" />
               <span className="sr-only">Settings</span>
             </Button>
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <img
-                src="/placeholder.svg?height=32&width=32"
-                width="32"
-                height="32"
-                className="rounded-full border"
-                alt="Avatar"
-              />
-              <span className="sr-only">Profile</span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <img
+                    src="/placeholder.svg?height=32&width=32"
+                    width="32"
+                    height="32"
+                    className="rounded-full border"
+                    alt="Avatar"
+                  />
+                  <span className="sr-only">Profile</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Profile</DropdownMenuItem>
+                <DropdownMenuItem>Settings</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
@@ -187,6 +234,10 @@ export default function DashboardPage() {
               <HelpCircle className="h-5 w-5" />
               Help & Support
             </Button>
+            <Button variant="destructive" className="justify-start gap-2" onClick={handleSignOut}>
+              <LogOut className="h-5 w-5" />
+              Sign Out
+            </Button>
           </div>
         </aside>
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -209,362 +260,54 @@ export default function DashboardPage() {
             </TabsList>
 
             <TabsContent value="overview" className="space-y-4">
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Active Disasters</AlertTitle>
-                <AlertDescription>There are currently 3 active disasters being monitored.</AlertDescription>
-              </Alert>
+              <DashboardSummary />
 
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Active Disasters</CardTitle>
-                    <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">3</div>
-                    <p className="text-xs text-muted-foreground">+1 from last month</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Resources Deployed</CardTitle>
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">1,284</div>
-                    <p className="text-xs text-muted-foreground">+346 from last month</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">People Affected</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">24,589</div>
-                    <p className="text-xs text-muted-foreground">+12% from last month</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Response Teams</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">42</div>
-                    <p className="text-xs text-muted-foreground">+8 from last month</p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="col-span-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Card className="col-span-2">
                   <CardHeader>
                     <CardTitle>Disaster Map</CardTitle>
-                    <CardDescription>Real-time visualization of active disasters</CardDescription>
+                    <CardDescription>Global view of active disasters</CardDescription>
                   </CardHeader>
-                  <CardContent className="h-[400px] p-0">
+                  <CardContent className="h-[400px]">
                     <DashboardMap />
                   </CardContent>
                 </Card>
-                <Card className="col-span-3">
+                <Card>
                   <CardHeader>
                     <CardTitle>Recent Activity</CardTitle>
-                    <CardDescription>Latest updates from the field</CardDescription>
+                    <CardDescription>Latest updates and alerts</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <RecentActivity />
                   </CardContent>
                 </Card>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
                 <Card className="col-span-3">
                   <CardHeader>
                     <CardTitle>Active Disasters</CardTitle>
-                    <CardDescription>Currently monitored disaster events</CardDescription>
+                    <CardDescription>Currently monitored events</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <DisasterList />
-                  </CardContent>
-                </Card>
-                <Card className="col-span-4">
-                  <CardHeader>
-                    <CardTitle>Resource Allocation</CardTitle>
-                    <CardDescription>Distribution of resources across active disasters</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ResourceAllocation />
                   </CardContent>
                 </Card>
               </div>
             </TabsContent>
 
             <TabsContent value="disasters" className="space-y-4">
-              <div className="flex justify-between">
-                <h2 className="text-xl font-bold">Disaster Management</h2>
-                <Button>Add New Disaster</Button>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle>Kerala Floods</CardTitle>
-                      <Badge>Critical</Badge>
-                    </div>
-                    <CardDescription>Started: 12 Jun 2023</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Type:</span>
-                        <span>Flood</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Location:</span>
-                        <span>Kerala, India</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Affected:</span>
-                        <span>12,450 people</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Status:</span>
-                        <span className="text-red-500 font-medium">Active</span>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1">
-                        Details
-                      </Button>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            className="flex-1"
-                            variant={responseStatus["1"] === 'success' ? "outline" : "default"}
-                          >
-                            {responseStatus["1"] === 'success' ? 'Update Response' : 'Respond'}
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Respond to Kerala Floods</DialogTitle>
-                            <DialogDescription>
-                              Select resources to deploy for this disaster response
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="grid gap-4 py-4">
-                            {["food", "water", "medical supplies", "shelter", "rescue equipment"].map((resource) => (
-                              <div key={resource} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`1-${resource}`}
-                                  checked={selectedResources["1"]?.includes(resource)}
-                                  onCheckedChange={() => handleResourceSelect("1", resource)}
-                                />
-                                <label
-                                  htmlFor={`1-${resource}`}
-                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                >
-                                  {resource.charAt(0).toUpperCase() + resource.slice(1)}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                          <DialogFooter>
-                            <Button
-                              onClick={() => handleRespond("1")}
-                              disabled={isResponding || !selectedResources["1"]?.length}
-                            >
-                              {isResponding ? "Responding..." : "Confirm Response"}
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle>Cyclone Amphan</CardTitle>
-                      <Badge>High</Badge>
-                    </div>
-                    <CardDescription>Started: 20 May 2023</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Type:</span>
-                        <span>Cyclone</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Location:</span>
-                        <span>West Bengal, India</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Affected:</span>
-                        <span>8,750 people</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Status:</span>
-                        <span className="text-red-500 font-medium">Active</span>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1">
-                        Details
-                      </Button>
-                      <Button size="sm" className="flex-1">
-                        Respond
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle>Uttarakhand Landslide</CardTitle>
-                      <Badge>Medium</Badge>
-                    </div>
-                    <CardDescription>Started: 5 Jul 2023</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Type:</span>
-                        <span>Landslide</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Location:</span>
-                        <span>Uttarakhand, India</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Affected:</span>
-                        <span>3,389 people</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Status:</span>
-                        <span className="text-red-500 font-medium">Active</span>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1">
-                        Details
-                      </Button>
-                      <Button size="sm" className="flex-1">
-                        Respond
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Disaster Statistics</CardTitle>
-                  <CardDescription>Historical data and trends</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <DisasterStats />
-                </CardContent>
-              </Card>
+              <DisasterManagement />
             </TabsContent>
 
             <TabsContent value="resources" className="space-y-4">
-              <div className="flex justify-between">
-                <h2 className="text-xl font-bold">Resource Management</h2>
-                <Button>Add Resources</Button>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {resourceTypes.slice(0, 4).map((resource) => (
-                  <Card key={resource.value}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">{resource.label}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{Math.floor(Math.random() * 1000) + 100}</div>
-                      <div className="text-xs text-muted-foreground">Available units</div>
-                      <div className="mt-4">
-                        <Button variant="outline" size="sm" className="w-full">
-                          Manage
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Resource Allocation</CardTitle>
-                  <CardDescription>Current distribution of resources</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResourceAllocation />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Resource Requests</CardTitle>
-                  <CardDescription>Pending requests from disaster areas</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between border-b pb-4">
-                      <div>
-                        <div className="font-medium">Kerala Floods</div>
-                        <div className="text-sm text-muted-foreground">Food & Water - 500 units</div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          Reject
-                        </Button>
-                        <Button size="sm">Approve</Button>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between border-b pb-4">
-                      <div>
-                        <div className="font-medium">Cyclone Amphan</div>
-                        <div className="text-sm text-muted-foreground">Medical Supplies - 200 units</div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          Reject
-                        </Button>
-                        <Button size="sm">Approve</Button>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">Uttarakhand Landslide</div>
-                        <div className="text-sm text-muted-foreground">Rescue Equipment - 50 units</div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          Reject
-                        </Button>
-                        <Button size="sm">Approve</Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <ResourceManagement />
             </TabsContent>
 
             <TabsContent value="map" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Disaster Mapping</CardTitle>
-                  <CardDescription>Geographic visualization of disaster events</CardDescription>
+                  <CardTitle>Disaster Map</CardTitle>
+                  <CardDescription>Global view of active disasters</CardDescription>
                 </CardHeader>
-                <CardContent className="h-[600px] p-0">
+                <CardContent className="h-[700px]">
                   <DashboardMap />
                 </CardContent>
               </Card>
@@ -573,8 +316,8 @@ export default function DashboardPage() {
             <TabsContent value="analytics" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Disaster Analytics</CardTitle>
-                  <CardDescription>Trends and patterns in disaster occurrences</CardDescription>
+                  <CardTitle>Disaster Statistics</CardTitle>
+                  <CardDescription>Analysis of disaster trends and impacts</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <DisasterStats />
@@ -583,68 +326,65 @@ export default function DashboardPage() {
             </TabsContent>
 
             <TabsContent value="calendar" className="space-y-4">
-              <div className="flex justify-between">
-                <h2 className="text-xl font-bold">Disaster Response Calendar</h2>
-                <Button>Add Event</Button>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {calendarEvents.map((event) => (
-                  <Card key={event.id}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">{event.title}</CardTitle>
-                        <Badge variant="outline">{event.type}</Badge>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Response Calendar</CardTitle>
+                  <CardDescription>Scheduled events and activities</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {calendarEvents.map((event) => (
+                      <div key={event.id} className="flex items-center gap-4 rounded-md border p-3">
+                        <div className="grid h-10 w-10 place-items-center rounded-md bg-primary/10 text-primary">
+                          <CalendarIcon className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <p className="text-sm font-medium">{event.title}</p>
+                          <div className="flex items-center text-xs text-muted-foreground">
+                            <Badge variant="outline" className="mr-2">
+                              {event.type}
+                            </Badge>
+                            {format(event.date, "MMM dd, yyyy")}
+                          </div>
+                        </div>
                       </div>
-                      <CardDescription>
-                        {format(event.date, "PPP")}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex justify-end">
-                        <Button variant="outline" size="sm">
-                          View Details
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="teams" className="space-y-4">
-              <div className="flex justify-between">
-                <h2 className="text-xl font-bold">Response Teams</h2>
-                <Button>Add Team</Button>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {teams.map((team) => (
-                  <Card key={team.id}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">{team.name}</CardTitle>
-                        <Badge variant={team.status === "Active" ? "default" : "secondary"}>
-                          {team.status}
-                        </Badge>
-                      </div>
-                      <CardDescription>
-                        {team.members} members • {team.location}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm">
-                          View Details
-                        </Button>
-                        <Button size="sm">
-                          Contact
+              <Card>
+                <CardHeader>
+                  <CardTitle>Response Teams</CardTitle>
+                  <CardDescription>Active and standby personnel</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {teams.map((team) => (
+                      <div key={team.id} className="flex items-center gap-4 rounded-md border p-3">
+                        <div className="grid h-10 w-10 place-items-center rounded-md bg-primary/10 text-primary">
+                          <Users className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <p className="text-sm font-medium">{team.name}</p>
+                          <div className="flex items-center text-xs text-muted-foreground">
+                            <Badge variant="outline" className={team.status === "Active" ? "bg-green-100" : ""}>
+                              {team.status}
+                            </Badge>
+                            <span className="ml-2">{team.members} members</span>
+                            <span className="ml-2">Location: {team.location}</span>
+                          </div>
+                        </div>
+                        <Button size="sm" variant="outline">
+                          View
                         </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </main>
