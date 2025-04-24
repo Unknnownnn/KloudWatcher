@@ -94,11 +94,11 @@ npm run dev
 
 The application is structured as follows:
 
-- `/app` - Next.js pages and routing
-- `/components` - React components
-- `/backend` - Python FastAPI server
-- `/public` - Static assets
-- `/styles` - Global styles and Tailwind configuration
+- `/app` - Next.js pages and routing.
+- `/components` - React components.
+- `/backend` - Python FastAPI server.
+- `/public` - Static assets.
+- `/styles` - Global styles and Tailwind configuration.
   
 
 ## License
